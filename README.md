@@ -23,7 +23,7 @@ The core library is light‑weight; the first time you instantiate a model, its 
 | **Teff** (K)           | 3 000 | 6 000  |
 | **log g** (dex)        | 3.0   | 5.0    |
 | **\[M/H]** (dex)       | –0.5  | +0.5   |
-| **Bfield** (kG)              | 0.0   | 12.0   |
+| **Bfield** (kG)        | 0.0   | 12.0   |
 | **v sin i** (km s⁻¹)   | 0.0   | 35.0   |
 
 ---
@@ -93,7 +93,7 @@ net = HMagNet("large")
 ## Extra utilities
 
 ```python
-wl   = net.get_wavelength()  # ndarray of 5503 wavelengths (Å)
+wl   = net.get_wavelength()  # ndarray of 1328 wavelengths (Å)
 seg  = net.get_segments()    # list of segment IDs ("0", "1", "2") for every region of spectra mentioned above
 ```
 
