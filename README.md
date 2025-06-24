@@ -34,9 +34,9 @@ Additionally, H-MagNet supports spectrum inversion, allowing users to estimate t
 
 | Variant    | Parameters | Download size\* | Best suited for                |
 | ---------- | ---------- | --------------- | ------------------------------ |
-| **tiny**   | ------     | ≈ 4 MB          | Edge devices & rapid scans     |
-| **small**  | ------     | ≈ 26 MB         | Laptops / notebooks            |
-| **medium** | ------     | ≈ 132 MB        | Workstations & small GPUs      |
+| **tiny**   | \~331 K    | ≈ 4 MB          | Edge devices & rapid scans     |
+| **small**  | \~2.2 M    | ≈ 26 MB         | Laptops / notebooks            |
+| **medium** | \~11.5 M   | ≈ 132 MB        | Workstations & small GPUs      |
 | **large**  | \~45 M     | ≈ 516 MB        | Maximum fidelity (server GPUs) |
 
 \*Sizes are approximate .h5 files downloaded on demand.
@@ -123,15 +123,6 @@ from hmagnet import HMagNet, config
 config(jobs=6)
 net = HMagNet("large")
 ...
-```
-
----
-
-## Extra utilities
-
-```python
-wl   = net.get_wavelength()  # ndarray of 5503 wavelengths (Å)
-seg  = net.get_segments()    # list of segment IDs ("0", "1", "2") for every region of spectra mentioned above
 ```
 
 ---
