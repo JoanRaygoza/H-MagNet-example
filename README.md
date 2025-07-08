@@ -114,6 +114,68 @@ solution, inv_spectra, fitness = net.inversion(
 )
 ```
 
+### Inversion with fixed parameters
+You can fix specific astrophysical parameters during the inversion by using the corresponding keyword arguments:
+* `fixed_teff`
+* `fixed_logg`
+* `fixed_mh`
+* `fixed_bfield`
+* `fixed_vsini`
+
+For example, the following call fixes `logg` and `vsini`:
+```python
+solution, inv_spectra, fitness = net.inversion(
+    spectrum,
+    n_particles=1024,
+    n_iterations=10,
+    fixed_logg=3.12,
+    fixed_vsini=13.78,
+    verbose=1
+)
+```
+
+### Inversion with parameter ranges
+You can constrain parameters to a specific range using the following arguments:
+* `teff_range`
+* `logg_range`
+* `mh_range`
+* `bfield_range`
+* `vsini_range`
+```python
+solution, inv_spectra, fitness = net.inversion(
+    spectrum,
+    n_particles=1024,
+    n_iterations=10,
+    teff_range=(3000, 5000),
+    vsini_range=(15, 35),
+    verbose=1
+)
+```
+This limits `Teff` and `vsini` to specific ranges while leaving the other parameters free. You may also combine fixed values for some parameters with range limits for others.
+
+### Inversion with magnetic filling factors
+You can estimate magnetic filling factors while keeping other stellar parameters fixed (`Teff`, `logg`, `[M/H]`, and `vsini`).
+To do this, use the `fixed_bfields` argument to define a list of discrete magnetic field strengths (in kG) that will be used as components in the inversion.
+
+The algorithm generates synthetic spectra for each value in `fixed_bfields`, using the fixed atmospheric parameters. It then finds the optimal set of filling factors (weights) that linearly combine these spectra to best match the observed spectrum. The weights are constrained to sum to one, representing the fractional surface coverage of each magnetic component.
+
+You can get the solution of filling factors with certain teff, logg, mh and vsini. You define fixed_bfields that are the steps of bfield. These filling factor are weights that multiply the spectra of every combination of teff, logg, mh and vsini with each step on bfield, the sum are the final spectra that compared with the observed.
+
+```python
+solution, inv_spectra, fitness = net.mag_filling_factor_inversion(
+    spectrum,
+    n_particles=1024,
+    n_iterations=10,
+    fixed_teff=3600,
+    fixed_logg=3.25,
+    fixed_mh=0.15,
+    fixed_vsini=15,
+    fixed_bfields=[0, 2, 4, 6, 8, 10, 12],
+    verbose=1
+)
+```
+In this example, the inversion will estimate how much each magnetic component (0–12 kG with 2kG step) contributes to the final spectrum, given the fixed stellar parameters.
+
 ### Important
 Be sure to select the corresponding device for run the model, whether GPU or CPU.
 If using the CPU, you can select the number of jobs to use. This configuration must be done before instantiating HMagNet.
@@ -123,6 +185,15 @@ from hmagnet import HMagNet, config
 config(jobs=6)
 net = HMagNet("large")
 ...
+```
+
+---
+
+## Extra utilities
+
+```python
+wl   = net.get_wavelength()  # ndarray of 5503 wavelengths (Å)
+seg  = net.get_segments()    # list of segment IDs ("0", "1", "2") for every region of spectra mentioned above
 ```
 
 ---
