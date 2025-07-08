@@ -246,27 +246,56 @@ inversion(
     W: float = 0.7,
     C1: float = 1.0,
     C2: float = 1.0,
+    fixed_teff: float | None = None,
+    fixed_logg: float | None = None,
+    fixed_mh: float | None = None,
+    fixed_bfield: float | None = None,
+    fixed_vsini: float | None = None,
+    teff_range: tuple[float, float] = (3000, 6000),
+    logg_range: tuple[float, float] = (3.0, 5.0),
+    mh_range: tuple[float, float] = (-0.5, 0.5),
+    bfield_range: tuple[float, float] = (0.0, 12.0),
+    vsini_range: tuple[float, float] = (0.0, 35.0),
     verbose: int = 0
 ) -> tuple[np.ndarray, np.ndarray, float]
 ```
 
-Estimates stellar parameters from a given flux vector via Particle Swarm Optimization (PSO).
-
-* `y_obs`: observed spectrum, shape `(1328,)` or `(1, 1328)`
-* `n_particles`: number of particles in the PSO population
-* `iters`: number of PSO iterations
-* `objective_function`: custom error function of the form `f(y_obs, y_pred)`
-  (default: mean squared error)
-* `W`: inertia weight (controls momentum)
-* `C1`: cognitive component (pull toward particle best)
-* `C2`: social component (pull toward global best)
-* `verbose`: `0` = silent, `1` = progress printed at each iteration
-
+Performs a global optimization using Particle Swarm Optimization (PSO) to infer the atmospheric parameters that best reproduce the observed spectrum `y_obs`.
+You can:
+* Fix any subset of parameters using the `fixed_*` arguments.
+* Restrict the search space of free parameters using the corresponding `*_range` tuples.
+* Combine fixed and ranged parameters as needed.
+**Parameters**:
+* y_obs (`np.ndarray`): The observed flux vector to be fitted.
+* n_particles (`int`): Number of particles used in the PSO swarm.
+* iters (`int`): Number of optimization iterations.
+* objective_function (`Callable`, optional): Objective function to minimize. Defaults to `default_objective`.
+* W, C1, C2 (`float`): PSO hyperparameters controlling inertia and learning factors.
+* fixed_teff, fixed_logg, fixed_mh, fixed_bfield, fixed_vsini (`float | None`): Values to fix specific parameters during the inversion. If `None`, the parameter is optimized.
+* teff_range, logg_range, mh_range, bfield_range, vsini_range (`tuple[float, float]`): Search intervals for each parameter (used if not fixed).
+* verbose (`int`): Verbosity level (0 = silent, 1 = progress info).
 **Returns**:
+* `solution` (`np.ndarray`): Best-fit parameter vector.
+* `inv_spectra` (`np.ndarray`): Synthetic spectrum corresponding to the best solution.
+* `fitness` (`float`): Final error value of the best-fit solution.
 
-* `solution`: inferred parameters (array of shape `(5,)`)
-* `inv_spectra`: spectrum generated from the inferred parameters
-* `fitness`: final value of the objective function
+```python
+mag_filling_factor_inversion(
+    y_obs: np.ndarray,
+    n_particles: int,
+    iters: int,
+    fixed_teff: float,
+    fixed_logg: float,
+    fixed_mh: float,
+    fixed_vsini: float,
+    objective_function: Callable = default_objective,
+    W: float = 0.7,
+    C1: float = 1.0,
+    C2: float = 1.0,
+    fixed_bfields: list(float) | [0.0,2.0,4.0,6.0,8.0,10.0,12.0],
+    verbose: int = 0
+) -> tuple[np.ndarray, np.ndarray, float]
+```
 
 ---
 
