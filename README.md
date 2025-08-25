@@ -83,7 +83,7 @@ H-MagNet can also be used to invert spectra, estimating the five astrophysical p
 solution, inv_spectra, fitness = net.inversion(
     y_obs=spectrum,         # Input flux (shape: [1, 1328] or [1328])
     n_particles=1024,       # Number of particles (poblation size)
-    iters=10,               # Optimization iterations
+    iters=50,               # Optimization iterations
     verbose=1               # Show progress
 )
 ```
@@ -94,7 +94,7 @@ This returns:
 * **fitness**: final value of the objective function.
 
 ### Custom objective function
-You can provide your own objective function to compare the observed and predicted spectra. It must accept two arguments: y_obs and y_pred.
+You can provide your own objective function to compare the observed and predicted spectra. It must accept two arguments: y_obs and y_pred with shape of n_particles, 1328. Returns an array of errors with shape of n_particles.
 
 Example using mean absolute error (per wavelength point):
 
@@ -108,7 +108,7 @@ Then use it like this:
 solution, inv_spectra, fitness = net.inversion(
     y_obs=spectrum,
     n_particles=1024,
-    iters=10,
+    iters=50,
     objective_function=obj,
     verbose=1
 )
@@ -127,7 +127,7 @@ For example, the following call fixes `logg` and `vsini`:
 solution, inv_spectra, fitness = net.inversion(
     spectrum,
     n_particles=1024,
-    n_iterations=10,
+    n_iterations=50,
     fixed_logg=3.12,
     fixed_vsini=13.78,
     verbose=1
@@ -145,7 +145,7 @@ You can constrain parameters to a specific range using the following arguments:
 solution, inv_spectra, fitness = net.inversion(
     spectrum,
     n_particles=1024,
-    n_iterations=10,
+    n_iterations=50,
     teff_range=(3000, 5000),
     vsini_range=(15, 35),
     verbose=1
@@ -165,7 +165,7 @@ You can get the solution of filling factors with certain teff, logg, mh and vsin
 solution, inv_spectra, fitness = net.mag_filling_factor_inversion(
     spectrum,
     n_particles=1024,
-    n_iterations=10,
+    n_iterations=50,
     fixed_teff=3600,
     fixed_logg=3.25,
     fixed_mh=0.15,
@@ -209,14 +209,13 @@ Main interface for spectral synthesis and inversion using neural network models.
 ### **Methods**
 
 ```python
-synthetize_spectra(data: np.ndarray, batch_size: int = 32) -> np.ndarray
+synthetize_spectra(data: np.ndarray) -> np.ndarray
 ```
 
 Generates synthetic spectra from stellar parameters.
 
 * `data`: 1D or 2D NumPy array of shape `(5,)` or `(n_samples, 5)` in the order
   *(Teff, log g, \[M/H], Bfield, vsini)*.
-* `batch_size`: number of inputs per batch (for efficiency on large inputs).
 
 ---
 
@@ -240,8 +239,9 @@ Each entry corresponds to one of the Fe line regions in the H band.
 ```python
 inversion(
     y_obs: np.ndarray,
-    n_particles: int,
-    iters: int,
+    wl_obs: np.ndarray = None,
+    n_particles: int = 1024,
+    iters: int = 50,
     objective_function: Callable = default_objective,
     W: float = 0.7,
     C1: float = 1.0,
@@ -256,6 +256,8 @@ inversion(
     mh_range: tuple[float, float] = (-0.5, 0.5),
     bfield_range: tuple[float, float] = (0.0, 12.0),
     vsini_range: tuple[float, float] = (0.0, 35.0),
+    tol: float = 1.0, 
+    min_wlp: int = 4,
     verbose: int = 0
 ) -> tuple[np.ndarray, np.ndarray, float]
 ```
@@ -267,12 +269,15 @@ You can:
 * Combine fixed and ranged parameters as needed.
 **Parameters**:
 * y_obs (`np.ndarray`): The observed flux vector to be fitted.
+* wl_obs (`np.ndarray`): The observed wavelength vector.
 * n_particles (`int`): Number of particles used in the PSO swarm.
 * iters (`int`): Number of optimization iterations.
 * objective_function (`Callable`, optional): Objective function to minimize. Defaults to `default_objective`.
 * W, C1, C2 (`float`): PSO hyperparameters controlling inertia and learning factors.
 * fixed_teff, fixed_logg, fixed_mh, fixed_bfield, fixed_vsini (`float | None`): Values to fix specific parameters during the inversion. If `None`, the parameter is optimized.
 * teff_range, logg_range, mh_range, bfield_range, vsini_range (`tuple[float, float]`): Search intervals for each parameter (used if not fixed).
+* tol (`float`): Tolerance in difference of 2 consecutive wavelength points to consider in optimization process.
+* min_wlp(`int`): Minimum number of wavelength points consecutives below the tolence to consider in optimization process.
 * verbose (`int`): Verbosity level (0 = silent, 1 = progress info).
 **Returns**:
 * `solution` (`np.ndarray`): Best-fit parameter vector.
@@ -282,20 +287,42 @@ You can:
 ```python
 mag_filling_factor_inversion(
     y_obs: np.ndarray,
-    n_particles: int,
-    iters: int,
-    fixed_teff: float,
-    fixed_logg: float,
-    fixed_mh: float,
-    fixed_vsini: float,
+    wl_obs: np.ndarray = None,
+    n_particles: int = 1024,
+    iters: int = 50,
+    objective_function: Callable = default_objective,
+    fixed_teff: float = 5000,
+    fixed_logg: float = 4.0,
+    fixed_mh: float = 0.0,
+    fixed_vsini: float = 20.0,
     objective_function: Callable = default_objective,
     W: float = 0.7,
     C1: float = 1.0,
     C2: float = 1.0,
     fixed_bfields: list(float) | [0.0,2.0,4.0,6.0,8.0,10.0,12.0],
+    tol: float = 1.0, 
+    min_wlp: int = 4,
     verbose: int = 0
 ) -> tuple[np.ndarray, np.ndarray, float]
 ```
+
+Performs a global optimization using Particle Swarm Optimization (PSO) to infer the atmospheric parameters that best reproduce the observed spectrum `y_obs` but with fixed teff, logg, mh and visni and with bfield steps to simulate spots of different magentic field intensity. The optimization process run to find the weights aka magnetic filling factors.
+
+**Parameters**:
+* y_obs (`np.ndarray`): The observed flux vector to be fitted.
+* wl_obs (`np.ndarray`): The observed wavelength vector.
+* n_particles (`int`): Number of particles used in the PSO swarm.
+* iters (`int`): Number of optimization iterations.
+* objective_function (`Callable`, optional): Objective function to minimize. Defaults to `default_objective`.
+* W, C1, C2 (`float`): PSO hyperparameters controlling inertia and learning factors.
+* fixed_teff, fixed_logg, fixed_mh, fixed_vsini (`float | None`): Values to fix specific parameters during the inversion.
+* tol (`float`): Tolerance in difference of 2 consecutive wavelength points to consider in optimization process.
+* min_wlp(`int`): Minimum number of wavelength points consecutives below the tolence to consider in optimization process.
+* verbose (`int`): Verbosity level (0 = silent, 1 = progress info).
+**Returns**:
+* `solution` (`np.ndarray`): Best-fit parameter vector.
+* `inv_spectra` (`np.ndarray`): Synthetic spectrum corresponding to the best solution.
+* `fitness` (`float`): Final error value of the best-fit solution.
 
 ---
 
